@@ -10,7 +10,7 @@ The Java security sandbox model has been around since more than a decade and wit
 
 All of the above have also been around for some time and enhanced throughout the JDK versions. Although these utilities provide an abundance of options for implementing security in a Java application developers still tend to choose in addition a number of third-party security libraries and frameworks that provide alternative or missing capabilities compared to those provided by the JDK (such as BouncyCastle for enhanced cryptography algorithms and utilities or JSch for SSH to name a few). In this article we will look into the state of JDK security as of JDK 11 and look at what do these latest enhancements bring to the developer’s toolbox. 
 
-## JDK 9, 10 and 11 from a security perspective.
+## JDK 9, 10 and 11 from a security perspective
 
 One of the first things that one can think of in terms of security when we deal with distributed systems is the necessity to establish secure communication channel between the distinct components of that system. The de-facto standard that has been well established over the years for the purpose is the transport layer security series of protocols (TLS for short) providing a number of improvements over its predecessor: SSL.  Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
 
