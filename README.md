@@ -84,7 +84,7 @@ try {
 	
 	PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 	out.println("Hi, server.");
-	BufferedReader in = new BufferedReader(new  							 InputStreamReader(s.getInputStream()));
+	BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
 	String x = in.readLine();
 	System.out.println(x);
 	
