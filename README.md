@@ -32,9 +32,9 @@ All of the above are introduced in JDK 9 while in JDK 10 a default set of root c
  
  * Additional extensions and algorithms;
  
- * Two new cipher suites: TLS_AES_128_GCM_SHA256 and TLS_AES_256_GCM_SHA384
+ * Two new cipher suites: TLS_AES_128_GCM_SHA256 and TLS_AES_256_GCM_SHA384;
  
- * RSASSA-PSS signature algorithms;
+ * RSASSA-PSS signature algorithms.
  
 It is good to note that TLS 1.3 is not backward compatible with previous versions of the protocol but the JSSE implementation provides backward compatibility mode. In addition both the synchronous (via the SSLSocket API) and asynchronous mode of operation (via the SSLEngine API) are updated to support TLS 1.3. 
 We want to build a client-server application that is using a custom application protocol secured with the latest version of TLS. We can use JDK 11 and provide an implementation based on JSSE (already providing support for TLS1.3). The following example TLS 1.3 client and server may be a good starting point:
