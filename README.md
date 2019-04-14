@@ -37,6 +37,7 @@ All of the above are introduced in JDK 9 while in JDK 10 a default set of root c
  * RSASSA-PSS signature algorithms.
  
 It is good to note that TLS 1.3 is not backward compatible with previous versions of the protocol but the JSSE implementation provides backward compatibility mode. In addition both the synchronous (via the SSLSocket API) and asynchronous mode of operation (via the SSLEngine API) are updated to support TLS 1.3. 
+
 We want to build a client-server application that is using a custom application protocol secured with the latest version of TLS. We can use JDK 11 and provide an implementation based on JSSE (already providing support for TLS1.3). The following example TLS 1.3 client and server may be a good starting point:
 
 TLSv1.3 JSSE server
@@ -101,9 +102,13 @@ As you can see from the highlighted lines above in order to enable TLS 1.3 in JD
 ## Enhancing the Security Sandbox Model
 
 Now let’s assume that our TLS 1.3 server is implemented as a set of distinct Jigsaw modules (Jigsaw brings a new module system to the JDK ecosystem as of JDK 9). Moreover our server application provides a plug-in system that uses a distinct classloader to load different applications providing integrations with third-party systems. This would imply that we need a form of access control for the applications managed by our server application. The Java security sandbox comes to the rescue. It remains the same as of JDK 9 where Jigsaw modules bring subtle changes to the JDK so that the permission model can be applied to modules. This is achieved by simply introducing a new scheme (jrt) for referring to Jigsaw modules when specifying permissions in the security.policy file. For example if we install a security manager in the JSSE server we created by adding the following at the beginning of the source code:
+```java
 System.setSecurityManager(new SecurityManager());
+```
 When you rerun the JSSE server you will get: 
+```java
 java.security.AccessControlException: access denied ("java.util.PropertyPermission" "javax.net.ssl.trustStore" "write")
+```
 This is simply because we also need to put the proper permissions in the security.policy file residing in the JDK installation directory (by default that is under conf/security) for the JDK we use to run the JSSE server. If the codebase (location from where we start the JSSE server) is the compilation directory (i.e. we run the JSSE server from the compiled Java class containing the snippet) in the security.policy file we would end up with (adding a few more permissions required):
 
 ```
@@ -121,7 +126,7 @@ grant codeBase "jrt:/com.exoscale.jsse.server " {
 };
 ```
 
-Deploying the sample application
+## Deploying the sample application
 
 We are going to demonstrate is manual deploy which of course can be automated with proper tools. Assuming you have provisioned an Linux Ubuntu 18.04 LTS 64-bit (i.e. from the Exoscale Web UI) you can ssh to the machine and do the following (assuming we have bundled our application in a runnable JAR and having it uploaded it somewhere accessible from your VM):
 
@@ -134,7 +139,8 @@ java –jar jsseserver.jar
 ```
 
 Of course you need to also specify the proper permissions in the security.policy file of the installed JDK in case you run your JSSE server with a security manager installed.
-Conclusion
+
+## Conclusion
 
 We saw briefly how to get started with TLS 1.3 in JDK 11, how to further apply the JDK security sandbox model over your application and how to provision your JDK application on the Exoscale cloud. Further JDK versions will continue providing security improvements. 
 
