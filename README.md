@@ -16,19 +16,19 @@ Every time when a permission check needs to be done by the application either an
 
 Apart from the security sandbox model the JDK is bringing a number of security utilities for use by developers such as:
 
- * JCA (Java Cryptography Architecture)
- * PKI (Public Key Infrastructure) utilities
- * JSSE (Java Secure Socket Extension)
- * Java GSS API (Java Generic Security Services)
- * Java SASL API (Java Simple Authentication and Security Layer)
+ * JCA (Java Cryptography Architecture). Provides a number of utilities for performing cryptographic operations such as creating digital signatures and message digests, using symmetric/asymmetric block/stream cyphers and other types of cryptographic services and algorithms. The JCA is provider-based, not bound to a particular set of algorithm implementations. There is a default implementation of the provider API provided by the JDK called SunJCA. Another widely used implementation is provided by the BouncyCastle library.
+ 
+ * PKI (Public Key Infrastructure) utilities. These are utilities for working with digital certificates, certificate revocation lists (CRLs) or the OCSP (Online Certificate Status Protocol). Later two provide mechanisms for checking of certificate revocation status as provided by the certificate authority. In that category are also the operations used to deal with key and trust stores in different formats (such as JKS and PKCS12);
+ 
+ * JSSE (Java Secure Socket Extension). This is JDK's implementation of the TLS (formerly SSL) and as of recently also DTLS series of protocols. In fact the JSSE is the one with the most improvements as of latest versions of the JDK as we shall see in the next sections;
+ 
+ * Java GSS API (Java Generic Security Services). The GSS API can be considering an alternative to the JSSE API and it uses token-based communication for encryption of traffic;
+ 
+ * Java SASL API (Java Simple Authentication and Security Layer). The framework provides a generic mechanism to establish the authentication channel between a client and a server. 
 
-// A paragraph about each of those items would be a huge improvement
-// I don't know about GSS and SASL for example
+All of these have been around for quite some time and enhanced throughout the JDK versions. Developers still tend to choose in addition a number of third-party security libraries and frameworks that typically provide extra security capabilities missing from the JDK. For example the BouncyCastle library provides enhanced cryptography algorithms and utilities and the JSch library provides SSH support for application (which is missing from the JDK). 
 
-All of the above have also been around for some time and enhanced throughout the JDK versions. Although these utilities provide an abundance of options for implementing security in a Java application developers still tend to choose in addition a number of third-party security libraries and frameworks that provide alternative or missing capabilities compared to those provided by the JDK (such as BouncyCastle for enhanced cryptography algorithms and utilities or JSch for SSH to name a few). In this article we will look into the state of JDK security as of JDK 11 and look at what do these latest enhancements bring to the developer’s toolbox.
-
-// I don't understand the sentence as it is
-// Please break it down into smaller sentences 
+We will further look into the state of JDK security as of JDK 11 and detail what are the benefits for developers.
 
 ## JDK 9, 10 and 11 from a security perspective
 
@@ -38,7 +38,7 @@ One of the first things that one can think of in terms of security when we deal 
 
 Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
 
- *	The TLS protocol is working over TCP meaning that it provides out of the box reliability of transfer (with retransmission of failed packets), error detection, flow and congestion control.  What about UDP protocols such as SIP (used by messaging applications) or DNS (used for name resolution)? DTLS comes to the rescue: the introduction of a datagram transport layer security protocol in the JDK enables applications to establish secure communication over an unreliable protocol such as UDP;
+ * The TLS protocol is working over TCP meaning that it provides out of the box reliability of transfer (with retransmission of failed packets), error detection, flow and congestion control.  What about UDP protocols such as SIP (used by messaging applications) or DNS (used for name resolution)? DTLS comes to the rescue: the introduction of a datagram transport layer security protocol in the JDK enables applications to establish secure communication over an unreliable protocol such as UDP;
  
  * TLS is typically bound to a concrete application protocol: for HTTP we have HTTPS, for the FTP we have SFTP and son on. These require distinct ports for each distinct protocol running over TLS. What about different versions of the same protocol? Same problem. ALPN comes to the rescue – the application layer protocol negotiation extension of TLS enables applications to negotiate the application protocol for use by communicating parties during the TLS handshake that establishes the secure channel. Consider for example HTTP 1.1 and HTTP 2.0: a TLS client and server may negotiate which version of the HTTP protocol to use during the TLS handshake process;
 
