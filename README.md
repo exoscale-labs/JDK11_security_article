@@ -32,21 +32,21 @@ We will further look into the state of JDK security as of JDK 11 and detail what
 
 ## JDK 9, 10 and 11 from a security perspective
 
-One of the first things that one can think of in terms of security when we deal with distributed systems is the necessity to establish secure communication channel between the distinct components of that system. The de-facto standard that has been well established over the years for the purpose is the transport layer security series of protocols (TLS for short) providing a number of improvements over its predecessor: SSL. 
+One of the first things that one can think of in terms of security when we deal with distributed systems is the necessity to establish secure communication channel between the distinct components of that system. The de-facto standard that has been well established over the years for the purpose is the transport layer security series of protocols (TLS for short) providing a number of improvements over its predecessor SSL such as:
 
-// Please describe succinctly which improvements with a few lines for each, listing the flaw of SSL and how TLS fixes it
+ - SSL protocols have exposed vulnerabilities such as the notorious POODLE attack over SSL 3.0 which is also made possible in modern browsers due to automatic downgrade to SSL 3.0 (if not disabled) used for the purpose of interoperability. Other vulnerabilities such as BEAST even cross the boundary by exploiting not only SSL (3.0) but also TLS 1.0 (but not later versions).
+ 
+ - TLS certificates are cryptographically stronger and hence more difficult to exploit than the SSL certificates;
 
-Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
+Without diving into more details it is worth saying that the changes made in regard to TLS break interoperability with the earlier SSL series of the protocol. Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
 
- * The TLS protocol is working over TCP meaning that it provides out of the box reliability of transfer (with retransmission of failed packets), error detection, flow and congestion control.  What about UDP protocols such as SIP (used by messaging applications) or DNS (used for name resolution)? DTLS comes to the rescue: the introduction of a datagram transport layer security protocol in the JDK enables applications to establish secure communication over an unreliable protocol such as UDP;
+ * The TLS protocol is working over TCP meaning that it provides out of the box reliability of transfer (with retransmission of failed packets), error detection, flow and congestion control.  What about UDP protocols such as SIP (used by messaging applications) or DNS (used for name resolution) ? DTLS comes to the rescue: the introduction of a datagram transport layer security protocol in the JDK enables applications to establish secure communication over an unreliable protocol such as UDP;
  
  * TLS is typically bound to a concrete application protocol: for HTTP we have HTTPS, for the FTP we have SFTP and son on. These require distinct ports for each distinct protocol running over TLS. What about different versions of the same protocol? Same problem. ALPN comes to the rescue – the application layer protocol negotiation extension of TLS enables applications to negotiate the application protocol for use by communicating parties during the TLS handshake that establishes the secure channel. Consider for example HTTP 1.1 and HTTP 2.0: a TLS client and server may negotiate which version of the HTTP protocol to use during the TLS handshake process;
 
  * When it comes to secure communication we cannot ignore thinking about performance implications as well. Although latest hardware enhancements minimize the impact on applying TLS over an existing protocol there are still some areas such as certificate revocation checking that imply increased network latency and hence are a performance hit. OCSP stapling is an improvement of the TLS protocol that allows for certificate revocation checking requests from the TLS client to the certificate authority that use the OCSP protocol to be performed by the TLS server thus minimizing the number of requests to the certificate authority.
 
-All of the above are introduced in JDK 9 while in JDK 10 a default set of root certificate authorities have been provided to the trust store of the JDK for use by Java applications. Moving further indisputably the security highlight of JDK 11 is the implementation of major parts of the TLS 1.3 protocol in JSSE. Major benefits of TLS 1.3 are improved security and performance including the following enhancements introduced by the protocol (as highlighted by JEP 332 upon which the implementation is based):
-
-// Please add a link to the JEP
+All of the above are introduced in JDK 9 while in JDK 10 a default set of root certificate authorities have been provided to the trust store of the JDK for use by Java applications. Moving further indisputably the security highlight of JDK 11 is the implementation of major parts of the TLS 1.3 protocol in JSSE. Major benefits of TLS 1.3 are improved security and performance including the following enhancements introduced by the protocol (as highlighted by [JEP322](https://openjdk.java.net/jeps/332) upon which the implementation is based):
  
  * Enhanced protocol version negotiation using an extension field indicating the list of supported versions;
  
@@ -68,90 +68,73 @@ We want to build a client-server application that is using a custom application 
 
 TLSv1.3 JSSE server
 ```java
+// setting the key store with the TLS server certificate
  System.setProperty("javax.net.ssl.keyStore", "C: /sample.pfx");
  System.setProperty("javax.net.ssl.keyStorePassword", "sample");
-	
-   SSLServerSocketFactory ssf = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
-    SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(4444);
-    ss.setEnabledProtocols(new String[] {"TLSv1.3"});
-    ss.setEnabledCipherSuites(new String[] {"TLS_AES_128_GCM_SHA256"});
-    
-    while (true) {
-      SSLSocket s = (SSLSocket) ss.accept();
-      SSLParameters params = s.getSSLParameters();
-      s.setSSLParameters(params);
-      
-      BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-      String line = null;
-      PrintStream out = new PrintStream(s.getOutputStream());
-      while (((line = in.readLine()) != null)) {
-        System.out.println(line);
-	    out.println("Hi, client");
-      }
-      in.close();
-      out.close();
-      s.close();
-    }
-```
 
-// 1. Please comment the code
-// 2. Use higher-level constructs when possible, closing objects is noise in regard to the important things you're doing above
+// getting a TLS socket factory for creating of server-side TLS sockets
+SSLServerSocketFactory ssf = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
 
-TLSv1.3 JSSE client
-```java
-try {
+// creating a server-side TLS socket on port 4444
+SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(4444);
 
-	System.setProperty("javax.net.ssl.trustStore", "C:/sample.pfx");
-	System.setProperty("javax.net.ssl.trustStorePassword", "sample");
+// the essential part in enabling TLS 1.3 is setting the protocol version and supported cryptographic cypher, 
+// typically one of new cypher combinations introduced by TLS 1.3
+ss.setEnabledProtocols(new String[] {"TLSv1.3"});
+ss.setEnabledCipherSuites(new String[] {"TLS_AES_128_GCM_SHA256"});
 
-	SSLSocketFactory ssf = (SSLSocketFactory) SSLSocketFactory.getDefault();
-	SSLSocket s = (SSLSocket) ssf.createSocket("127.0.0.1", 4444);
-	s.setEnabledProtocols(new String[] {"TLSv1.3"});
-    	s.setEnabledCipherSuites(new String[] {"TLS_AES_128_GCM_SHA256"});
-    
-	SSLParameters params = s.getSSLParameters();
-	s.setSSLParameters(params);
-	
-	PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-	out.println("Hi, server.");
-	BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-	String x = in.readLine();
-	System.out.println(x);
-	
-	out.close();
-	in.close();
-	s.close();
-} catch (Exception ex) {
-	ex.printStackTrace();
+// following is standard blocking reading and then writing to the TLS server socket
+while (true) {
+  SSLSocket s = (SSLSocket) ss.accept();  
+  BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+  String line = null;
+  PrintStream out = new PrintStream(s.getOutputStream());
+  while (((line = in.readLine()) != null)) {
+    System.out.println(line);
+    out.println("Hi, client");
+  }
+  ...
 }
 ```
 
-// Same as above, comments and noise (try/catch)
+// 1. Please comment the code
+
+TLSv1.3 JSSE client
+```java
+
+// setting the trusted store with the set of trusted (by the TLS client) certificate authorities
+System.setProperty("javax.net.ssl.trustStore", "C:/sample.pfx");
+System.setProperty("javax.net.ssl.trustStorePassword", "sample");
+
+// getting a TLS socket factory for creating of client-side TLS sockets
+SSLSocketFactory ssf = (SSLSocketFactory) SSLSocketFactory.getDefault();
+
+// creating a client-side TLS socket on port 4444
+SSLSocket s = (SSLSocket) ssf.createSocket("127.0.0.1", 4444);
+
+// the essential part in enabling TLS 1.3 also for the TLS client
+s.setEnabledProtocols(new String[] {"TLSv1.3"});
+s.setEnabledCipherSuites(new String[] {"TLS_AES_128_GCM_SHA256"});
+
+// following is standard writing and then blocking reading from the TLS client socket
+PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+out.println("Hi, server.");
+BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+String x = in.readLine();
+System.out.println(x);
+
+```
 
 As you can see from the highlighted lines above in order to enable TLS 1.3 in JDK 11 we need to specify the appropriate constant representing the protocol version over the server and client SSL sockets created and also set the appropriate cypher suites that TLS 1.3 expects again on both the client and server SSL sockets.
 
-// Please specify the lines explicitly, or use comments in the code
-
 ## Enhancing the Security Sandbox Model
 
-Now let’s assume that our TLS 1.3 server is implemented as a set of distinct Jigsaw modules (Jigsaw brings a new module system to the JDK ecosystem as of JDK 9). Moreover our server application provides a plug-in system that uses a distinct classloader to load different applications providing integrations with third-party systems. This would imply that we need a form of access control for the applications managed by our server application. The Java security sandbox comes to the rescue. It remains the same as of JDK 9 where Jigsaw modules bring subtle changes to the JDK so that the permission model can be applied to modules. This is achieved by simply introducing a new scheme (jrt) for referring to Jigsaw modules when specifying permissions in the security.policy file. For example if we install a security manager in the JSSE server we created by adding the following at the beginning of the source code:
-```java
-System.setSecurityManager(new SecurityManager());
-```
-// I must push back strongly
-// You should never ever set the security manager in the code
-// As you might already have been compromised
-// Instead, you should run your java app with -Djava.security.manager
-When you rerun the JSSE server you will get: 
+Now let’s assume that our TLS 1.3 server is implemented as a set of distinct Jigsaw modules (Jigsaw brings a new module system to the JDK ecosystem as of JDK 9). Moreover our server application provides a plug-in system that uses a distinct classloader to load different applications providing integrations with third-party systems. This would imply that we need a form of access control for the applications managed by our server application. The Java security sandbox comes to the rescue. It remains the same as of JDK 9 where Jigsaw modules bring subtle changes to the JDK so that the permission model can be applied to modules. This is achieved by simply introducing a new scheme (jrt) for referring to Jigsaw modules when specifying permissions in the security.policy file. 
+For example if we install a security manager in the JSSE server we created by passing the **-Djava.security.manager** JVM parameter (note that this can be done programatically via the **System.setSecurityManager(...)** call but this is not recommended) we will get the following exception: 
 ```java
 java.security.AccessControlException: access denied ("java.util.PropertyPermission" "javax.net.ssl.trustStore" "write")
 ```
-This is simply because we also need to put the proper permissions in the security.policy file residing in the JDK installation directory (by default that is under conf/security) for the JDK we use to run the JSSE server. If the codebase (location from where we start the JSSE server) is the compilation directory (i.e. we run the JSSE server from the compiled Java class containing the snippet) in the security.policy file we would end up with (adding a few more permissions required):
-// There's some information that depends on the version
-// conf/security is the location since Java 9 if I remember well
-// Plus, you don't need (shouldn't?) use the default policy file, because you might have different apps using the same JRE
-// As per the Security Manager, it's better IMHO to use -Djava.security.policy==/path/to/policy
-
+This is simply because we also need to put the proper permissions in the security.policy file residing in the JDK installation directory (by default that is under conf/security since JDK 9) for the JDK we use to run the JSSE server. Or even better we may specify a dedicated policy file just for our server application using the **-Djava.security.policy** parameter pointing to the location of the custom security policy file. If the codebase (location from where we start the JSSE server) is the compilation directory (i.e. we run the JSSE server from the compiled Java class containing the snippet) in the security.policy file we would end up with (adding a few more permissions required):
 ```
 grant codeBase "file:/C:/project/target/" {
 		permission java.util.PropertyPermission "javax.net.ssl.keyStore", "write";
@@ -169,25 +152,21 @@ grant codeBase "jrt:/com.exoscale.jsse.server " {
 
 ## Deploying the sample application
 
-We are going to demonstrate is manual deploy which of course can be automated with proper tools. Assuming you have provisioned an Linux Ubuntu 18.04 LTS 64-bit (i.e. from the Exoscale Web UI) you can ssh to the machine and do the following (assuming we have bundled our application in a runnable JAR and having it uploaded it somewhere accessible from your VM):
-
-// Please update the order
-// First, describe what we require
-// Then go on
+We are going to demonstrate is manual deploy which of course can be automated with proper tools. Assuming we have provisioned a Linux Ubuntu 18.04 LTS 64-bit machine (i.e. from the Exoscale Web UI) we can ssh to the machine and first install Oracle JVM 11 using the following commands:
 
 ```
 sudo apt-get update
 sudo add-apt-repository ppa:linuxuprising/java
 sudo apt-get install oracle-java11-installer
-wget https://filebin.net/vxsv072m3jebv90m/jsseserver.jar?t=ba3n293q –O jsseserver.jar
-java –jar jsseserver.jar
 ```
 
-Of course you need to also specify the proper permissions in the security.policy file of the installed JDK in case you run your JSSE server with a security manager installed.
+Then specify proper permissions in the security.policy file of the installed JDK (or a separate one as discussed earlier) in case you run your JSSE server with a security manager installed. You use the earlier **grant** clause by modifying the code source to point to the **jsseserver.jar**.
+Then assuming we have bundled our application in a runnable JAR and having uploaded it somewhere accessible from our VM we run the following commands to download and run the application (you can also pass the JVM parameter for enabling default security manager as discussed earlier):
 
-// Move above in the requirements
-// This would benefit from going into more details, as it can be something people could actually try (hands-on)
-// Instead of using filebin.net, perhaps using this very same Github repo to host the JAR would be better?
+```
+wget https://github.com/exoscale-labs/JDK11_security_article/raw/master/resources/jsseserver.jar –O jsseserver.jar
+java –jar jsseserver.jar
+```
 
 ## Conclusion
 
