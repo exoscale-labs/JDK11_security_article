@@ -1,10 +1,20 @@
 # State of security in JDK 11
 
-The Java security sandbox model has been around since more than a decade and with some enhancements over the years it remains pretty much the same as of JDK 11. On the other hand the JDK is bringing a number of security utilities for use by developers such as:
+The Java security sandbox model has been around since more than a decade and with some enhancements over the years it remains pretty much the same as of JDK 11. It dates back to JDK 1.2 and is described succinctly by the following diagram: 
 
-// You should succinctly introduce the security sandbox model
-// Not everyone knows about it
-// In that case, you should put yourself in the shoes of a junior Java dev who has little clues about security
+![Java Security Sandbox Model](https://github.com/exoscale-labs/JDK11_security_article/blob/master/resources/java__security_sandbox_model.png
+ "Java Security Sandbox Model")
+
+In a nutshell the security sandbox model was introduced out of the necessarity to provide a constraint environment for source code loaded from java applets running on the customer's environment (the browser). Later on this model expanded to pretty much any Java managed environment capable to load and execute custom application (such as OSGi, Java EE or even Java stored procedures running in Oracle RSBMS). 
+Every time when a permission check needs to be done by the application either an instance of the **java.lang.SecurityManager** class installed in the JVM runtime or the static methods ot the **java.security.AccessController** utility need to be used. In fact the **java.lang.SecurityManager** delegates its operations to the **java.security.AccessController**. To describe the model briefly consider the following flow:
+
+ * the Java application is being loaded by the JVM and during classloading for each class of the application a **java.security.ProtectionDomain** instance is set that contains the code source (location of where the class was loaded from) and set of Java permissions that apply to that class based on its location (as specified in the **security.policy** file);
+   
+ * during execution the **checkPermission** method of the installed security manager (or AccessController utility) is called to check if the calling code has the permission to perform the requested action identified by a particular Java permission (instance of the **java.security.Permission**) class. The permission check is done by traversing the current call stack and checking whether the protection domain of each class in the call stack has the requested permission (passed as a parameter to the **checkPermission** call). If there is even a single class that does have the permissions there is a security exception raised;
+ 
+* on certain occasions there is a need to escalate privileges of a block of code (typically to allow temporary access to an operation that is forbidden to callers by default). That can be achieved by calling one of the **doPrivileged** methods. 
+
+Apart from the security sandbox model the JDK is bringing a number of security utilities for use by developers such as:
 
  * JCA (Java Cryptography Architecture)
  * PKI (Public Key Infrastructure) utilities
