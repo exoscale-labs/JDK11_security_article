@@ -97,7 +97,6 @@ while (true) {
 }
 ```
 
-// 1. Please comment the code
 
 TLSv1.3 JSSE client
 ```java
