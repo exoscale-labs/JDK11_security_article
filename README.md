@@ -2,17 +2,31 @@
 
 The Java security sandbox model has been around since more than a decade and with some enhancements over the years it remains pretty much the same as of JDK 11. On the other hand the JDK is bringing a number of security utilities for use by developers such as:
 
+// You should succinctly introduce the security sandbox model
+// Not everyone knows about it
+// In that case, you should put yourself in the shoes of a junior Java dev who has little clues about security
+
  * JCA (Java Cryptography Architecture)
  * PKI (Public Key Infrastructure) utilities
  * JSSE (Java Secure Socket Extension)
  * Java GSS API (Java Generic Security Services)
  * Java SASL API (Java Simple Authentication and Security Layer)
 
-All of the above have also been around for some time and enhanced throughout the JDK versions. Although these utilities provide an abundance of options for implementing security in a Java application developers still tend to choose in addition a number of third-party security libraries and frameworks that provide alternative or missing capabilities compared to those provided by the JDK (such as BouncyCastle for enhanced cryptography algorithms and utilities or JSch for SSH to name a few). In this article we will look into the state of JDK security as of JDK 11 and look at what do these latest enhancements bring to the developer’s toolbox. 
+// A paragraph about each of those items would be a huge improvement
+// I don't know about GSS and SASL for example
+
+All of the above have also been around for some time and enhanced throughout the JDK versions. Although these utilities provide an abundance of options for implementing security in a Java application developers still tend to choose in addition a number of third-party security libraries and frameworks that provide alternative or missing capabilities compared to those provided by the JDK (such as BouncyCastle for enhanced cryptography algorithms and utilities or JSch for SSH to name a few). In this article we will look into the state of JDK security as of JDK 11 and look at what do these latest enhancements bring to the developer’s toolbox.
+
+// I don't understand the sentence as it is
+// Please break it down into smaller sentences 
 
 ## JDK 9, 10 and 11 from a security perspective
 
-One of the first things that one can think of in terms of security when we deal with distributed systems is the necessity to establish secure communication channel between the distinct components of that system. The de-facto standard that has been well established over the years for the purpose is the transport layer security series of protocols (TLS for short) providing a number of improvements over its predecessor: SSL.  Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
+One of the first things that one can think of in terms of security when we deal with distributed systems is the necessity to establish secure communication channel between the distinct components of that system. The de-facto standard that has been well established over the years for the purpose is the transport layer security series of protocols (TLS for short) providing a number of improvements over its predecessor: SSL. 
+
+// Please describe succinctly which improvements with a few lines for each, listing the flaw of SSL and how TLS fixes it
+
+Major enhancements have been introduced in the JSSE API in regard to the TLS support in the JDK. Let’s see how they fill in some of the gaps in the protocol’s capabilities:
 
  *	The TLS protocol is working over TCP meaning that it provides out of the box reliability of transfer (with retransmission of failed packets), error detection, flow and congestion control.  What about UDP protocols such as SIP (used by messaging applications) or DNS (used for name resolution)? DTLS comes to the rescue: the introduction of a datagram transport layer security protocol in the JDK enables applications to establish secure communication over an unreliable protocol such as UDP;
  
@@ -21,6 +35,8 @@ One of the first things that one can think of in terms of security when we deal 
  * When it comes to secure communication we cannot ignore thinking about performance implications as well. Although latest hardware enhancements minimize the impact on applying TLS over an existing protocol there are still some areas such as certificate revocation checking that imply increased network latency and hence are a performance hit. OCSP stapling is an improvement of the TLS protocol that allows for certificate revocation checking requests from the TLS client to the certificate authority that use the OCSP protocol to be performed by the TLS server thus minimizing the number of requests to the certificate authority.
 
 All of the above are introduced in JDK 9 while in JDK 10 a default set of root certificate authorities have been provided to the trust store of the JDK for use by Java applications. Moving further indisputably the security highlight of JDK 11 is the implementation of major parts of the TLS 1.3 protocol in JSSE. Major benefits of TLS 1.3 are improved security and performance including the following enhancements introduced by the protocol (as highlighted by JEP 332 upon which the implementation is based):
+
+// Please add a link to the JEP
  
  * Enhanced protocol version negotiation using an extension field indicating the list of supported versions;
  
@@ -68,6 +84,9 @@ TLSv1.3 JSSE server
     }
 ```
 
+// 1. Please comment the code
+// 2. Use higher-level constructs when possible, closing objects is noise in regard to the important things you're doing above
+
 TLSv1.3 JSSE client
 ```java
 try {
@@ -97,7 +116,11 @@ try {
 }
 ```
 
+// Same as above, comments and noise (try/catch)
+
 As you can see from the highlighted lines above in order to enable TLS 1.3 in JDK 11 we need to specify the appropriate constant representing the protocol version over the server and client SSL sockets created and also set the appropriate cypher suites that TLS 1.3 expects again on both the client and server SSL sockets.
+
+// Please specify the lines explicitly, or use comments in the code
 
 ## Enhancing the Security Sandbox Model
 
@@ -105,11 +128,19 @@ Now let’s assume that our TLS 1.3 server is implemented as a set of distinct J
 ```java
 System.setSecurityManager(new SecurityManager());
 ```
+// I must push back strongly
+// You should never ever set the security manager in the code
+// As you might already have been compromised
+// Instead, you should run your java app with -Djava.security.manager
 When you rerun the JSSE server you will get: 
 ```java
 java.security.AccessControlException: access denied ("java.util.PropertyPermission" "javax.net.ssl.trustStore" "write")
 ```
 This is simply because we also need to put the proper permissions in the security.policy file residing in the JDK installation directory (by default that is under conf/security) for the JDK we use to run the JSSE server. If the codebase (location from where we start the JSSE server) is the compilation directory (i.e. we run the JSSE server from the compiled Java class containing the snippet) in the security.policy file we would end up with (adding a few more permissions required):
+// There's some information that depends on the version
+// conf/security is the location since Java 9 if I remember well
+// Plus, you don't need (shouldn't?) use the default policy file, because you might have different apps using the same JRE
+// As per the Security Manager, it's better IMHO to use -Djava.security.policy==/path/to/policy
 
 ```
 grant codeBase "file:/C:/project/target/" {
@@ -130,6 +161,10 @@ grant codeBase "jrt:/com.exoscale.jsse.server " {
 
 We are going to demonstrate is manual deploy which of course can be automated with proper tools. Assuming you have provisioned an Linux Ubuntu 18.04 LTS 64-bit (i.e. from the Exoscale Web UI) you can ssh to the machine and do the following (assuming we have bundled our application in a runnable JAR and having it uploaded it somewhere accessible from your VM):
 
+// Please update the order
+// First, describe what we require
+// Then go on
+
 ```
 sudo apt-get update
 sudo add-apt-repository ppa:linuxuprising/java
@@ -139,6 +174,10 @@ java –jar jsseserver.jar
 ```
 
 Of course you need to also specify the proper permissions in the security.policy file of the installed JDK in case you run your JSSE server with a security manager installed.
+
+// Move above in the requirements
+// This would benefit from going into more details, as it can be something people could actually try (hands-on)
+// Instead of using filebin.net, perhaps using this very same Github repo to host the JAR would be better?
 
 ## Conclusion
 
